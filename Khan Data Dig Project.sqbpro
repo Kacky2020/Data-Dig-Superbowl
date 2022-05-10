@@ -1,52 +1,72 @@
-<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="/Users/Shane/Downloads/Khan Data Dig Project.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="898"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,18:mainSB_teams_NBCSports"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="Losers" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="114"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="SB_teams_NBCSports" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="206"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="Winners_Losers" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="119"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="superbowls" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="68"/><column index="2" value="69"/><column index="3" value="119"/><column index="4" value="66"/><column index="5" value="114"/><column index="6" value="59"/><column index="7" value="141"/><column index="8" value="153"/><column index="9" value="86"/><column index="10" value="63"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1">--Find Min, Max, Avg for Winning Points and Losing Points
+--Super Bowl Insights
+--May 10, 2022
+--Kelly Sapp
+--Data Source:  github/pamelafox/superbowl.sql
+
+--Overview:  Over the course of 54 years, 28 teams have made it to America's greatest football competition, the Super Bowl.
+
+--Objective:  *Query Super Bowl (SB) team data to determine answers to interesting questions.
+--
+--	      *Question:  Who is the winningest team in the NFL?
+--
+--            *Question:  Which teams have made it to the SB, either has a winner or loser?  Have any teams never been to SB?
+
+
+--Answers to interesting questions:
+
+--What is the Min, Max, Avg of Winning Points and Losing points?
 SELECT MIN(Winner_Pts), MAX(winner_pts), AVG(Winner_pts)
 FROM superbowls
 
 SELECT MIN(Loser_Pts), MAX(Loser_Pts), AVG(Loser_Pts)
 FROM superbowls
 
---Calculate each SB game point spread
+--What is each SB game's point spread?
 SELECT Winner, Loser, (Winner_Pts-Loser_Pts) AS Point_Spread
 FROM superbowls
 ORDER BY Point_Spread DESC
 
---Calculate which SB games had &gt;10 point spread
+--Which SB games had more than a 10 point spread?
 SELECT Winner, Loser, (Winner_Pts-Loser_Pts) AS Point_Spread
 FROM superbowls
-WHERE Point_Spread&gt;10
+WHERE Point_Spread > 10
 ORDER BY Point_Spread DESC
-
---Count how many times each winner has won
-SELECT Winner, Count(*) AS SB_wins
-FROM superbowls
-GROUP BY Winner
-ORDER BY Count(*) DESC
-
---Select SB winners with more than 4 wins
-SELECT Winner, Count(*) AS SB_wins
-FROM superbowls
-GROUP BY Winner
-HAVING SB_wins &gt; 4
-ORDER BY SB_wins DESC
 
 --Print comment according to how big/small point spread
 SELECT Winner, Loser, (Winner_Pts-Loser_Pts),
 CASE 
-	WHEN (Winner_Pts-Loser_Pts) &gt;= 14 THEN 'Won by 2 or more touchdowns!'
+	WHEN (Winner_Pts-Loser_Pts)= 14 THEN 'Won by 2 or more touchdowns!'
 	WHEN  (Winner_Pts-Loser_Pts) BETWEEN 4 AND 13 THEN 'Decent win!'
 	ELSE 'Barely won!'
 END Point_spread_comment
 FROM superbowls
 
---Calculate top 5 MVPs
+--Who are the top 5 MVPs?
 SELECT MVP, Count(*) AS MVP_count
 FROM superbowls
 GROUP BY MVP
 ORDER BY MVP_count DESC
 LIMIT 5
 
+--Answer to question:  Which NFL team is the winningest?
 
---Prep to make a table of all teams, winner or loser (basically teams that have made it to the SB)
+--First, How many times has each winner won?
+SELECT Winner, Count(*) AS SB_wins
+FROM superbowls
+GROUP BY Winner
+ORDER BY Count(*) DESC
+
+--Then, Which SB winners have more than 4 wins?
+SELECT Winner, Count(*) AS SB_wins
+FROM superbowls
+GROUP BY Winner
+HAVING SB_wins > 4
+ORDER BY SB_wins DESC
+
+
+--Answer to question:  Which NFL teams have made it to the Super Bowl?
+--
+--From dataset, prep to make a table of all teams, winner or loser (that is, all teams that have made it to the SB)
 CREATE TABLE Winners_Losers
 AS
 SELECT DISTINCT(Winner) AS Team
@@ -61,12 +81,13 @@ INSERT INTO Winners_Losers
 SELECT *
 FROM Losers
 
---Determine which teams have been to SB (either as winner or loser)
+--Which teams have been to SB (either as winner or loser)
 SELECT DISTINCT(Team) AS SB_teams
 FROM Winners_Losers
 
---Notes:  Query indicates 31 different teams have been to the Super Bowl.  I cross-checked with another data source which
---indicated 28 teams had been to Super Bowl.  Create new table with NBC Sports SB winners and losers
+--Notes:  Query indicates 31 different teams have been to the Super Bowl.  I cross-checked with another data source,
+--(https://sports.nbcsports.com/2022/02/13/how-many-nfl-teams-have-never-won-or-appeared-in-a-super-bowl/),
+--which indicated 28 teams had been to Super Bowl.  Create new table with NBC Sports SB winners and losers from data source.
 
 CREATE TABLE SB_teams_NBCSports(SB_teams TEXT)
 INSERT  INTO SB_teams_NBCSports (SB_teams) VALUES('Kansas City Chiefs');
@@ -98,14 +119,15 @@ INSERT  INTO SB_teams_NBCSports (SB_teams) VALUES('Los Angeles Chargers');
 INSERT  INTO SB_teams_NBCSports (SB_teams) VALUES('Las Vegas Raiders');
 INSERT  INTO SB_teams_NBCSports (SB_teams) VALUES('Washington Football Team');
 
---Check for data consisitency; there ought to be 25 teams in both lists
+--Check for data consisitency.  I anticipate there to be 25 teams which occur in both lists
 --Only found 22 matches (which means 3 were missing)
---Discovered 3 misspelled teams in table I input, so I corrected those spellings with UPDATE calls
+
 SELECT DISTINCT(Team)
 FROM Winners_Losers
 INNER JOIN SB_teams_NBCSports
 ON Winners_Losers.Team = SB_teams_NBCSports.SB_teams		
 
+--Discovered 3 misspelled teams in table I created from NBC Sports data, so I corrected those spellings with UPDATE calls
 --Update records in SB_teams_NBCSports where team name did not match given data set because of spelling errors
 UPDATE SB_teams_NBCSports 
 SET SB_teams = 'Indianapolis Colts'
@@ -119,4 +141,18 @@ UPDATE SB_teams_NBCSports
 SET SB_teams = 'Cincinnati Bengals'
 WHERE SB_teams = 'Cincinatti Bengals'
 
-</sql><current_tab id="0"/></tab_sql></sqlb_project>
+--Insights:   Who is the winningest team in the NFL, i. e. which team has won the 
+--            Super Bowl the most times? 
+--            The Pittsburgh Steelers and New England Patriots (each with 6 SB wins).  
+--
+--            Which teams have made it to the SB, either has a winner or loser?  
+--            After an analysis of the data, it was determined that of the 32 NFL teams, 28 have made it to the SB. This means
+--            4 teams have never been to the SB.
+
+
+--Recommendations:  Complete further research to determine possible reasons why Pittsburgh Steelers and New England Patriots
+--	            have won so many Super Bowls.  These two teams have won 22% of all Super Bowls.  What sets them apart?  
+--                  Bigger budget (therefore more talented players and coaches)?  More enthused fan-base?
+--
+--                  Complete further research why 4 teams have never been to the Super Bowl?  Smaller budget (therefore 
+--                  less talented players and coaches)?
